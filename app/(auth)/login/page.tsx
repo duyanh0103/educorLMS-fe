@@ -1,0 +1,86 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuthStore } from "@/store/auth-store";
+import { apiClient } from "@/lib/api-client";
+import { ApiRequestError } from "@/types/api";
+import type { LoginResponse, User } from "@/types/auth";
+
+export default function LoginPage() {
+  const router = useRouter();
+  const setAuth = useAuthStore((s) => s.setAuth);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+    try {
+      const data = await apiClient<LoginResponse>("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ username, password }),
+      });
+      useAuthStore.getState().setAccessToken(data.accessToken);
+      let user: User = data.user;
+      try {
+        user = await apiClient<User>("/auth/me");
+      } catch {
+        // token vừa đăng nhập vẫn hợp lệ — dùng tạm user rút gọn từ /auth/login nếu /auth/me lỗi
+      }
+      setAuth(data.accessToken, user);
+      router.push("/trang-chu");
+    } catch (err) {
+      const message =
+        err instanceof ApiRequestError ? err.message : "Đã có lỗi xảy ra, thử lại sau.";
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <div className="flex h-screen items-center justify-center bg-muted/30">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle className="text-xl">Đăng nhập LMS</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">Tên đăng nhập</Label>
+              <Input
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Mật khẩu</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
