@@ -4,11 +4,11 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/store/auth-store";
 import { useClassDetail } from "@/hooks/use-class-detail";
+import { useMyClasses } from "@/hooks/use-dashboard";
 import { useExams } from "@/hooks/use-exams";
 import { ExamCard } from "@/components/exam/exam-card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ExamStatus } from "@/types/exam";
 
@@ -28,16 +28,52 @@ export default function ClassDetailPage({
   const user = useAuthStore((s) => s.user);
   const [statusFilter, setStatusFilter] = useState<ExamStatus | "ALL">("ALL");
 
-  const { data: classDetail, isLoading: loadingClass, isError: errorClass } = useClassDetail(classId);
+  const isStudent = user?.role === "STUDENT";
+
+  // TEACHER/SUPER_ADMIN: gọi /classes/:id trực tiếp (Student không có quyền, sẽ bị 403)
+  const {
+    data: classDetailFull,
+    isLoading: loadingClassFull,
+    isError: errorClassFull,
+  } = useClassDetail(classId, !isStudent);
+
+  // STUDENT: lấy từ danh sách lớp đang học đã fetch sẵn, tìm theo classId
+  const {
+    data: myClasses,
+    isLoading: loadingMyClasses,
+    isError: errorMyClasses,
+  } = useMyClasses();
+
+  const loadingClass = isStudent ? loadingMyClasses : loadingClassFull;
+  const errorClass = isStudent ? errorMyClasses : errorClassFull;
+
+  const studentClassInfo = isStudent
+    ? myClasses?.items.find((e) => e.classId === classId)?.class
+    : undefined;
+
   const { data: exams, isLoading: loadingExams, isError: errorExams } = useExams(classId);
 
   if (!user) return null;
 
   if (loadingClass) return <p className="text-sm text-muted-foreground">Đang tải...</p>;
-  if (errorClass || !classDetail)
-    return <p className="text-sm text-destructive">Không tải được thông tin lớp học.</p>;
 
-  const primaryTeacher = classDetail.teachers.find((t) => t.isPrimary)?.teacher;
+  if (isStudent) {
+    if (errorClass || !studentClassInfo)
+      return <p className="text-sm text-destructive">Không tải được thông tin lớp học.</p>;
+  } else {
+    if (errorClass || !classDetailFull)
+      return <p className="text-sm text-destructive">Không tải được thông tin lớp học.</p>;
+  }
+
+  // Header hiển thị: 2 nguồn dữ liệu khác nhau tùy role, gộp lại field chung để render 1 giao diện
+  const headerName = isStudent ? studentClassInfo!.name : classDetailFull!.name;
+  const headerCourseTitle = isStudent ? studentClassInfo!.course.title : classDetailFull!.course.title;
+  const headerIsActive = isStudent ? studentClassInfo!.isActive : classDetailFull!.isActive;
+  const primaryTeacher = !isStudent
+    ? classDetailFull!.teachers.find((t) => t.isPrimary)?.teacher
+    : undefined; // Student không có quyền lấy data này, ẩn đi
+  const enrollmentCount = !isStudent ? classDetailFull!._count.enrollments : undefined; // tương tự
+
   const isTeacherOrAdmin = user.role === "TEACHER" || user.role === "SUPER_ADMIN";
 
   const filteredExams =
@@ -49,15 +85,26 @@ export default function ClassDetailPage({
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">{classDetail.name}</h1>
-            {!classDetail.isActive && <Badge variant="secondary">Ngừng hoạt động</Badge>}
+            <h1 className="text-2xl font-bold">{headerName}</h1>
+            {!headerIsActive && <Badge variant="secondary">Ngừng hoạt động</Badge>}
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">{classDetail.course.title}</p>
-          <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
-            {primaryTeacher && <span>GV phụ trách: {primaryTeacher.fullName}</span>}
-            <span>{classDetail._count.enrollments} học sinh</span>
-          </div>
+          <p className="mt-1 text-sm text-muted-foreground">{headerCourseTitle}</p>
+          {(primaryTeacher || enrollmentCount !== undefined) && (
+            <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
+              {primaryTeacher && <span>GV phụ trách: {primaryTeacher.fullName}</span>}
+              {enrollmentCount !== undefined && <span>{enrollmentCount} học sinh</span>}
+            </div>
+          )}
         </div>
+
+        {isTeacherOrAdmin && (
+          <Link
+            href={`/lop-hoc/${classId}/yeu-cau-lam-lai`}
+            className={cn(buttonVariants({ size: "sm", variant: "outline" }))}
+          >
+            Yêu cầu làm lại
+          </Link>
+        )}
       </div>
 
       {/* Danh sách đề thi */}
