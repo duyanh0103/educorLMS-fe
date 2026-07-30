@@ -5,7 +5,7 @@ import { useAdminDashboard, useTeacherDashboard, useMyClasses } from "@/hooks/us
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ClassCard } from "@/components/dashboard/class-card";
 import { WelcomeBanner } from "@/components/dashboard/welcome-banner";
-import { Users, BookOpen, GraduationCap, ClipboardList, FileCheck } from "lucide-react";
+import { Users, BookOpen, GraduationCap, ClipboardList, FileCheck, FileText, Clock } from "lucide-react";
 
 export default function TrangChuPage() {
   const user = useAuthStore((s) => s.user);
@@ -54,7 +54,7 @@ function AdminHome({ fullName }: { fullName: string }) {
         <div>
           <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Bài Thi</h2>
           <div className="grid grid-cols-2 gap-3">
-            <StatCard label="Tổng đề thi" value={data.exams.total} />
+            <StatCard label="Tổng đề thi" value={data.exams.total} icon={FileText} />
             <StatCard
               label="Tỷ lệ đã chấm"
               value={`${Math.round(data.exams.submissionRate * 100)}%`}
@@ -65,8 +65,8 @@ function AdminHome({ fullName }: { fullName: string }) {
         <div>
           <h2 className="mb-2 text-sm font-semibold text-muted-foreground">Bài Tập</h2>
           <div className="grid grid-cols-2 gap-3">
-            <StatCard label="Tổng bài tập" value={data.assignments.total} />
-            <StatCard label="Nộp trễ" value={data.assignments.lateSubmissions} />
+            <StatCard label="Tổng bài tập" value={data.assignments.total} icon={ClipboardList} />
+            <StatCard label="Nộp trễ" value={data.assignments.lateSubmissions} icon={Clock} />
           </div>
         </div>
       </div>

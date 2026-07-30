@@ -30,10 +30,10 @@ export function ClassCard({ classId, name, courseName, studentCount, isActive }:
             {!active && <Badge variant="secondary">Ngừng hoạt động</Badge>}
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-1 flex-col">
           <p className="text-sm text-muted-foreground">{courseName}</p>
           {typeof studentCount === "number" && (
-            <p className="mt-2 text-xs text-muted-foreground">{studentCount} học sinh</p>
+            <p className="mt-auto pt-2 text-xs text-muted-foreground">{studentCount} học sinh</p>
           )}
         </CardContent>
       </Card>

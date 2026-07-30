@@ -20,15 +20,21 @@ export function ClassListCard({ classItem }: { classItem: ClassListItem }) {
             )}
           </div>
         </CardHeader>
-        <CardContent className="space-y-1">
+        <CardContent className="flex flex-1 flex-col">
           <p className="text-sm text-muted-foreground">{classItem.course.title}</p>
-          <div className="my-3 h-px bg-border" />
-          {primaryTeacher && (
-            <p className="text-[12.5px] text-muted-foreground">GV phụ trách: {primaryTeacher.fullName}</p>
-          )}
-          <div className="mt-2 flex items-center gap-1.5 text-muted-foreground">
-            <Users className="h-3.5 w-3.5" />
-            <span className="text-[12.5px]">{classItem._count.enrollments} học sinh</span>
+
+          {/* Ghim khối GV/số học sinh xuống đáy card, để thẳng hàng giữa các card dù có/không có GV phụ trách */}
+          <div className="mt-auto pt-3">
+            <div className="h-px bg-border" />
+            {primaryTeacher && (
+              <p className="mt-3 text-[12.5px] text-muted-foreground">
+                GV phụ trách: {primaryTeacher.fullName}
+              </p>
+            )}
+            <div className={`flex items-center gap-1.5 text-muted-foreground ${primaryTeacher ? "mt-2" : "mt-3"}`}>
+              <Users className="h-3.5 w-3.5" />
+              <span className="text-[12.5px]">{classItem._count.enrollments} học sinh</span>
+            </div>
           </div>
         </CardContent>
       </Card>

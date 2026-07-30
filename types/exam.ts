@@ -8,5 +8,6 @@ export interface Exam {
   status: ExamStatus;
   classId: string;
   createdAt: string;
-  _count: { questions: number };
+  // Có ở GET /classes/:classId/exams (list); KHÔNG có ở GET /exams/:id (detail) — luôn optional-check.
+  _count?: { questions: number };
 }
