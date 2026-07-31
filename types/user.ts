@@ -14,6 +14,9 @@ export interface UserListItem {
 export interface UserDetail extends UserListItem {
   updatedAt: string;
   deletedAt: string | null;
+  // Mới xuất hiện trên response thật (chưa có hồi đầu phiên làm việc) — có vẻ backend đang
+  // chuẩn bị hạ tầng cho tính năng đổi mật khẩu. null nếu chưa từng đổi mật khẩu.
+  passwordChangedAt: string | null;
 }
 
 export interface CreateUserPayload {
