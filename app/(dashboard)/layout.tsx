@@ -12,6 +12,7 @@ import { apiClient } from "@/lib/api-client";
 const SECTION_LABEL: Record<string, string> = {
   "/trang-chu": "Tổng quan",
   "/lop-hoc": "Danh sách",
+  "/nguoi-dung": "Danh sách",
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
