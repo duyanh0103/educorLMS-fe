@@ -3,12 +3,18 @@
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useExamDetail } from "@/hooks/use-exam-detail";
-import { useStartSubmission, useSubmitSubmission } from "@/hooks/use-submission";
+import {
+  useMySubmission,
+  useStartSubmission,
+  useSubmissionDetail,
+  useSubmitSubmission,
+} from "@/hooks/use-submission";
 import { useCreateRetakeRequest, useMyRetakeRequest } from "@/hooks/use-retake-request";
 import { ApiRequestError } from "@/types/api";
 import type { StartSubmissionResponse, SubmitSubmissionResponse } from "@/types/submission";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,6 +28,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 import { ShieldAlert, Clock } from "lucide-react";
 
 type ViewState = "intro" | "blocked" | "taking" | "result";
@@ -39,6 +46,8 @@ export default function TakeExamPage({
   const { data: exam, isLoading: loadingExam, isError: errorExam } = useExamDetail(examId);
   const startMutation = useStartSubmission(examId);
   const submitMutation = useSubmitSubmission(examId);
+  const mySubmissionMutation = useMySubmission(examId);
+  const submissionDetailMutation = useSubmissionDetail();
 
   const [view, setView] = useState<ViewState>("intro");
   const [blockedMessage, setBlockedMessage] = useState("");
@@ -78,10 +87,10 @@ export default function TakeExamPage({
   }
 
   async function handleStart() {
+    if (!exam) return;
     try {
       const data = await startMutation.mutateAsync();
-      const elapsedSeconds = Math.floor((Date.now() - new Date(data.startedAt).getTime()) / 1000);
-      const remaining = data.durationMinutes * 60 - elapsedSeconds;
+      const remaining = data.durationMinutes * 60 - computeElapsedSeconds(data.startedAt);
 
       if (remaining <= 0) {
         // Phiên làm bài (resume từ /start idempotent) đã hết giờ thật trước khi vào —
@@ -98,8 +107,36 @@ export default function TakeExamPage({
       setView("taking");
       await requestFullscreen();
     } catch (err) {
+      if (err instanceof ApiRequestError && err.status === 409) {
+        // Đã nộp bài rồi (kể cả ở phiên trước, sau khi rời trang quay lại) — lấy submission thật
+        // qua /submissions/mine + /submissions/:id để hiện lại màn kết quả, thay vì chỉ hiện
+        // thông báo chung chung "không thể vào làm bài".
+        const recovered = await tryRecoverResult();
+        if (recovered) return;
+      }
       setBlockedMessage(err instanceof ApiRequestError ? err.message : "Đã có lỗi xảy ra, vui lòng thử lại.");
       setView("blocked");
+    }
+  }
+
+  async function tryRecoverResult(): Promise<boolean> {
+    if (!exam) return false;
+    try {
+      const mine = await mySubmissionMutation.mutateAsync();
+      const detail = await submissionDetailMutation.mutateAsync(mine.id);
+      setSubmission({
+        id: detail.id,
+        attemptNumber: detail.attemptNumber,
+        startedAt: detail.startedAt,
+        durationMinutes: exam.durationMinutes,
+        questions: detail.questions,
+      });
+      setResult(detail);
+      hasFinished.current = true;
+      setView("result");
+      return true;
+    } catch {
+      return false;
     }
   }
 
@@ -292,6 +329,11 @@ export default function TakeExamPage({
 
   if (view === "result" && result) {
     const isGraded = result.status === "GRADED";
+    // Điểm đạt = tối thiểu một nửa tổng điểm tối đa của đề (đề không có thang điểm cố định
+    // như 10, nên lấy mốc giữa tổng điểm các câu làm "điểm trung bình" để xét Đạt/Chưa đạt).
+    const totalPossibleScore = submission?.questions.reduce((sum, q) => sum + q.score, 0) ?? 0;
+    const passThreshold = totalPossibleScore / 2;
+    const isFailing = isGraded && totalPossibleScore > 0 && (result.score ?? 0) < passThreshold;
     // Chỉ PENDING/APPROVED mới chặn gửi yêu cầu mới (khớp logic backend) — REJECTED vẫn cho gửi lại.
     const canRequestRetake =
       !loadingRetakeRequest && (!myRetakeRequest || myRetakeRequest.status === "REJECTED");
@@ -304,9 +346,20 @@ export default function TakeExamPage({
           </CardHeader>
           <CardContent className="space-y-4">
             {isGraded ? (
-              <p className="text-3xl font-bold text-primary">{result.score} điểm</p>
+              <div className="space-y-1.5">
+                <p className={cn("text-3xl font-bold", isFailing ? "text-destructive" : "text-primary")}>
+                  {result.score} điểm
+                </p>
+                {isFailing && <Badge variant="destructive">Chưa đạt</Badge>}
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground">Bài có câu tự luận — chờ giáo viên chấm điểm.</p>
+            )}
+
+            {/* Luôn có một trạng thái hiển thị ở đây (loading/pending/approved/rejected/nút mời gửi yêu cầu) —
+                không để khoảng trống trong lúc chờ API trả lời trạng thái yêu cầu làm lại. */}
+            {loadingRetakeRequest && (
+              <p className="text-sm text-muted-foreground">Đang kiểm tra trạng thái yêu cầu làm lại...</p>
             )}
 
             {!loadingRetakeRequest && myRetakeRequest?.status === "PENDING" && (
@@ -503,4 +556,8 @@ function formatTime(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function computeElapsedSeconds(startedAt: string) {
+  return Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
 }

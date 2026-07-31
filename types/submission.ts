@@ -44,3 +44,26 @@ export interface SubmitSubmissionResponse {
   submittedAt: string;
   gradedAt: string | null;
 }
+
+// GET /exams/:examId/submissions/mine — dùng khi /start trả 409 (đã nộp) để biết
+// submissionId thật mà lấy chi tiết, thay vì chỉ hiện thông báo chung chung.
+export interface MySubmissionResponse {
+  id: string;
+  attemptNumber: number;
+  status: SubmissionStatus;
+  score: number | null;
+  startedAt: string;
+  submittedAt: string | null;
+  gradedAt: string | null;
+  retakeRequest: { id: string; status: string; reason: string | null } | null;
+}
+
+// GET /submissions/:id — correctAnswer chỉ có khi status === "GRADED" (backend ẩn với student
+// nếu chưa chấm xong), nên để optional thay vì bắt buộc.
+export interface SubmissionDetailQuestion extends SubmissionQuestion {
+  correctAnswer?: string;
+}
+
+export interface SubmissionDetail extends SubmitSubmissionResponse {
+  questions: SubmissionDetailQuestion[];
+}
