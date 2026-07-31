@@ -23,6 +23,7 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import type { RetakeRequestStatus } from "@/types/retake-request";
+import { formatDateTimeVN } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
 
 const STATUS_TABS: { label: string; value: RetakeRequestStatus | "ALL" }[] = [
@@ -115,9 +116,7 @@ export default function RetakeRequestsPage({
                   {req.status === "REJECTED" && req.reviewNote && (
                     <p className="text-sm text-destructive">Ghi chú từ chối: {req.reviewNote}</p>
                   )}
-                  <p className="text-xs text-muted-foreground">
-                    Gửi lúc {new Date(req.createdAt).toLocaleString("vi-VN")}
-                  </p>
+                  <p className="text-xs text-muted-foreground">Gửi lúc {formatDateTimeVN(req.createdAt)}</p>
                 </div>
 
                 {req.status === "PENDING" && (
