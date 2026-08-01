@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useRef, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useExamDetail } from "@/hooks/use-exam-detail";
 import {
@@ -69,6 +69,7 @@ export default function TakeExamPage({
   } = useMyRetakeRequest(examId, result?.id ?? "", view === "result" && !!result);
   const createRetakeRequest = useCreateRetakeRequest(examId, result?.id ?? "");
 
+  const examContainerRef = useRef<HTMLDivElement>(null);
   const lastViolationAt = useRef(0);
   const hasFinished = useRef(false); // true khi đã nộp (thủ công hoặc tự động) — chặn double-submit
   const answersRef = useRef<Record<string, string>>({});
@@ -80,7 +81,9 @@ export default function TakeExamPage({
 
   async function requestFullscreen() {
     try {
-      await document.documentElement.requestFullscreen();
+      // Fullscreen riêng khung làm bài (không phải document.documentElement) để sidebar/header
+      // của dashboard layout (là sibling ngoài khung này) không hiển thị đè lên khi toàn màn hình.
+      await (examContainerRef.current ?? document.documentElement).requestFullscreen();
     } catch {
       // Không hỗ trợ/bị chặn — vẫn cho làm bài, chỉ là không ép được fullscreen
     }
@@ -256,15 +259,18 @@ export default function TakeExamPage({
   }
 
   // ----- Render -----
-  if (loadingExam) {
-    return <p className="text-sm text-muted-foreground">Đang tải...</p>;
-  }
-  if (errorExam || !exam) {
-    return <p className="text-sm text-destructive">Không tải được thông tin đề thi.</p>;
-  }
+  // Toàn bộ nội dung (mọi view) được bọc trong MỘT div persistent duy nhất mang examContainerRef
+  // (xem return cuối hàm) — để node đó luôn tồn tại trong DOM ngay từ trước khi bấm "Bắt đầu làm bài",
+  // tránh việc requestFullscreen() nhắm vào ref còn null (do React chưa kịp render lại) hoặc việc
+  // node bị unmount giữa các view khiến trình duyệt tự thoát fullscreen.
+  let content: ReactNode;
 
-  if (view === "intro") {
-    return (
+  if (loadingExam) {
+    content = <p className="text-sm text-muted-foreground">Đang tải...</p>;
+  } else if (errorExam || !exam) {
+    content = <p className="text-sm text-destructive">Không tải được thông tin đề thi.</p>;
+  } else if (view === "intro") {
+    content = (
       <div className="flex justify-center py-8">
         <Card className="w-full max-w-xl">
           <CardHeader className="space-y-3 text-center">
@@ -307,10 +313,8 @@ export default function TakeExamPage({
         </Card>
       </div>
     );
-  }
-
-  if (view === "blocked") {
-    return (
+  } else if (view === "blocked") {
+    content = (
       <div className="flex justify-center py-8">
         <Card className="w-full max-w-md">
           <CardHeader>
@@ -325,9 +329,7 @@ export default function TakeExamPage({
         </Card>
       </div>
     );
-  }
-
-  if (view === "result" && result) {
+  } else if (view === "result" && result) {
     const isGraded = result.status === "GRADED";
     // Điểm đạt = tối thiểu một nửa tổng điểm tối đa của đề (đề không có thang điểm cố định
     // như 10, nên lấy mốc giữa tổng điểm các câu làm "điểm trung bình" để xét Đạt/Chưa đạt).
@@ -338,7 +340,7 @@ export default function TakeExamPage({
     const canRequestRetake =
       !loadingRetakeRequest && (!myRetakeRequest || myRetakeRequest.status === "REJECTED");
 
-    return (
+    content = (
       <div className="flex justify-center py-8">
         <Card className="w-full max-w-md text-center">
           <CardHeader>
@@ -432,14 +434,12 @@ export default function TakeExamPage({
         </Card>
       </div>
     );
-  }
+  } else if (submission && submission.questions[currentIndex]) {
+    const question = submission.questions[currentIndex];
+    const answeredCount = Object.keys(answers).length;
 
-  if (!submission) return null;
-  const question = submission.questions[currentIndex];
-  const answeredCount = Object.keys(answers).length;
-
-  return (
-    <div className="space-y-4">
+    content = (
+      <div className="space-y-4">
       <div className="sticky top-0 z-10 flex items-center justify-between bg-background/95 py-2 backdrop-blur">
         <div className="text-sm text-muted-foreground">
           Câu {currentIndex + 1}/{submission.questions.length} · Đã trả lời {answeredCount}/
@@ -548,6 +548,16 @@ export default function TakeExamPage({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={examContainerRef}
+      className="[&:fullscreen]:h-screen [&:fullscreen]:overflow-y-auto [&:fullscreen]:bg-[#FAFAF9] [&:fullscreen]:p-7"
+    >
+      {content}
     </div>
   );
 }

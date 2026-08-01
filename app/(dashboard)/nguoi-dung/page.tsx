@@ -180,9 +180,13 @@ export default function UsersPage() {
                   </TableCell>
                   <TableCell>
                     {u.isActive ? (
-                      <Badge className="bg-primary/10 text-primary">Đang hoạt động</Badge>
+                      <Badge className="bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400">
+                        Đang hoạt động
+                      </Badge>
                     ) : (
-                      <Badge variant="secondary">Đã khóa</Badge>
+                      <Badge className="bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400">
+                        Đã khóa
+                      </Badge>
                     )}
                   </TableCell>
                   <TableCell className="space-x-2 text-right">
