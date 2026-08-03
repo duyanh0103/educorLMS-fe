@@ -19,6 +19,7 @@ import { apiClient } from "@/lib/api-client";
 const SECTION_LABEL: Record<string, string> = {
   "/trang-chu": "Tổng quan",
   "/lop-hoc": "Danh sách",
+  "/khoa-hoc": "Danh sách",
   "/nguoi-dung": "Danh sách",
   "/ho-so": "Cá nhân",
 };

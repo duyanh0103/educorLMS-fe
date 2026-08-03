@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Search } from "lucide-react";
 import { useClasses } from "@/hooks/use-classes";
 import { ClassListCard } from "@/components/dashboard/class-list-card";
+import { CreateClassDialog } from "@/components/class/create-class-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -33,20 +34,23 @@ export default function LopHocPage() {
             </p>
           )}
         </div>
-        <form onSubmit={handleSearchSubmit} className="flex gap-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Tìm theo tên lớp..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="w-64 pl-9"
-            />
-          </div>
-          <Button type="submit" variant="secondary">
-            Tìm
-          </Button>
-        </form>
+        <div className="flex items-center gap-2">
+          <form onSubmit={handleSearchSubmit} className="flex gap-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Tìm theo tên lớp..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="w-64 pl-9"
+              />
+            </div>
+            <Button type="submit" variant="secondary">
+              Tìm
+            </Button>
+          </form>
+          <CreateClassDialog />
+        </div>
       </div>
 
       {isLoading && <p className="text-sm text-muted-foreground">Đang tải...</p>}

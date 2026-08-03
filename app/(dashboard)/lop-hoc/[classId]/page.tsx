@@ -8,6 +8,9 @@ import { useMyClasses } from "@/hooks/use-dashboard";
 import { useExams } from "@/hooks/use-exams";
 import { ExamCard } from "@/components/exam/exam-card";
 import { EnrolledStudentsSection } from "@/components/enrollment/enrolled-students-section";
+import { EditClassDialog } from "@/components/class/edit-class-dialog";
+import { ManageTeachersDialog } from "@/components/class/manage-teachers-dialog";
+import { DeleteClassButton } from "@/components/class/delete-class-button";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -145,14 +148,27 @@ export default function ClassDetailPage({
           )}
         </div>
 
-        {isTeacherOrAdmin && (
-          <Link
-            href={`/lop-hoc/${classId}/yeu-cau-lam-lai`}
-            className={cn(buttonVariants({ size: "sm", variant: "outline" }))}
-          >
-            Yêu cầu làm lại
-          </Link>
-        )}
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          {user.role === "SUPER_ADMIN" && classDetailFull && (
+            <div className="flex gap-2">
+              <EditClassDialog
+                classId={classId}
+                currentName={classDetailFull.name}
+                currentIsActive={classDetailFull.isActive}
+              />
+              <ManageTeachersDialog classId={classId} currentTeachers={classDetailFull.teachers} />
+              <DeleteClassButton classId={classId} className={classDetailFull.name} />
+            </div>
+          )}
+          {isTeacherOrAdmin && (
+            <Link
+              href={`/lop-hoc/${classId}/yeu-cau-lam-lai`}
+              className={cn(buttonVariants({ size: "sm", variant: "outline" }))}
+            >
+              Yêu cầu làm lại
+            </Link>
+          )}
+        </div>
       </div>
 
       {isTeacherOrAdmin ? (

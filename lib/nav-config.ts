@@ -1,4 +1,4 @@
-import { Home, Layers, Users } from "lucide-react";
+import { Home, Layers, Users, GraduationCap } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Role } from "@/types/auth";
 
@@ -19,6 +19,7 @@ export const navByRole: Record<Role, NavItem[]> = {
   SUPER_ADMIN: [
     { label: "Trang Chủ", href: "/trang-chu", icon: Home },
     { label: "Lớp Học", href: "/lop-hoc", icon: Layers },
+    { label: "Khóa Học", href: "/khoa-hoc", icon: GraduationCap },
     { label: "Quản Lý Người Dùng", href: "/nguoi-dung", icon: Users },
   ],
 };

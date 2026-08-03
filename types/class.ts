@@ -46,3 +46,20 @@ export interface ClassListItem {
   teachers: ClassTeacher[];
   _count: { enrollments: number };
 }
+
+export interface CreateClassPayload {
+  name: string;
+  courseId: string;
+  teacherIds?: string[];
+  primaryTeacherId?: string;
+}
+
+export interface UpdateClassPayload {
+  name?: string;
+  isActive?: boolean;
+}
+
+export interface UpdateClassTeachersPayload {
+  teacherIds: string[];
+  primaryTeacherId?: string;
+}
