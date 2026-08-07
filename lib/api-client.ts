@@ -63,14 +63,18 @@ export async function apiClient<T>(
     return await rawRequest<T>(endpoint, options, token);
   } catch (err) {
     if (err instanceof ApiRequestError && err.status === 401 && !isAuthEndpoint) {
+      let newToken: string;
       try {
-        const newToken = await refreshAccessToken();
-        return await rawRequest<T>(endpoint, options, newToken);
+        newToken = await refreshAccessToken();
       } catch {
+        // Chỉ logout khi chính việc refresh token thất bại (refresh token hết hạn/invalid).
+        // Không logout nếu request retry sau đó lỗi vì lý do khác (mạng chập chờn...),
+        // vì lúc đó access token mới đã hợp lệ, không nên xoá.
         useAuthStore.getState().clearAuth();
         if (typeof window !== "undefined") window.location.href = "/login";
         throw err;
       }
+      return await rawRequest<T>(endpoint, options, newToken);
     }
     throw err;
   }
