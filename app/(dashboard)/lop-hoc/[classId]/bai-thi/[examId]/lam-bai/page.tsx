@@ -456,6 +456,14 @@ export default function TakeExamPage({
           <CardTitle className="text-base font-normal">
             Câu {currentIndex + 1}: {question.content}
           </CardTitle>
+          {question.contentImageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element -- ảnh Cloudinary tuỳ ý, không cấu hình next/image
+            <img
+              src={question.contentImageUrl}
+              alt=""
+              className="mt-2 max-h-64 rounded-md border object-contain"
+            />
+          )}
         </CardHeader>
         <CardContent>
           {question.type === "MULTIPLE_CHOICE" && question.options ? (
@@ -464,10 +472,14 @@ export default function TakeExamPage({
               onValueChange={(value) => handleAnswerChange(question.id, value)}
             >
               {question.options.map((opt) => (
-                <div key={opt.key} className="flex items-center space-x-2 py-1.5">
-                  <RadioGroupItem value={opt.key} id={`${question.id}-${opt.key}`} />
-                  <Label htmlFor={`${question.id}-${opt.key}`} className="cursor-pointer font-normal">
+                <div key={opt.key} className="flex items-start space-x-2 py-1.5">
+                  <RadioGroupItem value={opt.key} id={`${question.id}-${opt.key}`} className="mt-1" />
+                  <Label htmlFor={`${question.id}-${opt.key}`} className="flex-1 cursor-pointer font-normal">
                     {opt.key}. {opt.text}
+                    {opt.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element -- ảnh Cloudinary tuỳ ý
+                      <img src={opt.imageUrl} alt="" className="mt-1 h-20 rounded border object-contain" />
+                    )}
                   </Label>
                 </div>
               ))}

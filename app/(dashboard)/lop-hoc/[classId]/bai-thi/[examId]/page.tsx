@@ -5,11 +5,15 @@ import { useExamDetail } from "@/hooks/use-exam-detail";
 import { useQuestions, useCreateQuestion, useUpdateQuestion, useDeleteQuestion } from "@/hooks/use-questions";
 import { useUpdateExam } from "@/hooks/use-exam-mutations";
 import { QuestionFormDialog } from "@/components/exam/question-form-dialog";
+import { ImportQuestionsDialog } from "@/components/exam/import-questions-dialog";
 import { ExamStatusBadge } from "@/components/exam/exam-status-badge";
+import { SubmissionsList } from "@/components/grading/submissions-list";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ApiRequestError } from "@/types/api";
-import { Pencil, Trash2, Plus, CheckCircle2 } from "lucide-react";
+import { Pencil, Trash2, Plus, CheckCircle2, Upload } from "lucide-react";
 import type { Question, CreateQuestionPayload } from "@/types/question";
 
 export default function ManageExamPage({
@@ -17,7 +21,7 @@ export default function ManageExamPage({
 }: {
   params: Promise<{ classId: string; examId: string }>;
 }) {
-  const { examId } = use(params);
+  const { classId, examId } = use(params);
 
   const { data: exam, isLoading: loadingExam, isError: errorExam } = useExamDetail(examId);
   const { data: questions, isLoading: loadingQuestions } = useQuestions(examId);
@@ -80,42 +84,65 @@ export default function ManageExamPage({
         </p>
       )}
 
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Câu hỏi</h2>
-        {isDraft && (
-          <QuestionFormDialog
-            trigger={
-              <Button size="sm">
-                <Plus className="mr-1 h-4 w-4" /> Thêm câu hỏi
-              </Button>
-            }
-            nextOrder={nextOrder}
-            onSubmit={handleCreateQuestion}
-            isSubmitting={createQuestion.isPending}
-          />
-        )}
-      </div>
+      <Tabs defaultValue="questions">
+        <TabsList>
+          <TabsTrigger value="questions">Câu hỏi</TabsTrigger>
+          <TabsTrigger value="submissions">Bài nộp</TabsTrigger>
+        </TabsList>
 
-      {loadingQuestions && <p className="text-sm text-muted-foreground">Đang tải câu hỏi...</p>}
-      {questions && questions.length === 0 && (
-        <p className="text-sm text-muted-foreground">Chưa có câu hỏi nào.</p>
-      )}
+        <TabsContent value="questions" className="space-y-4 pt-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Câu hỏi</h2>
+            {isDraft && (
+              <div className="flex gap-2">
+                <ImportQuestionsDialog
+                  examId={examId}
+                  trigger={
+                    <Button size="sm" variant="outline">
+                      <Upload className="mr-1 h-4 w-4" /> Import từ file
+                    </Button>
+                  }
+                />
+                <QuestionFormDialog
+                  trigger={
+                    <Button size="sm">
+                      <Plus className="mr-1 h-4 w-4" /> Thêm câu hỏi
+                    </Button>
+                  }
+                  nextOrder={nextOrder}
+                  onSubmit={handleCreateQuestion}
+                  isSubmitting={createQuestion.isPending}
+                />
+              </div>
+            )}
+          </div>
 
-      <div className="space-y-3">
-        {questions
-          ?.slice()
-          .sort((a, b) => a.order - b.order)
-          .map((q, idx) => (
-            <QuestionRow
-              key={q.id}
-              question={q}
-              index={idx}
-              examId={examId}
-              isDraft={isDraft}
-              onDelete={() => handleDelete(q.id)}
-            />
-          ))}
-      </div>
+          {loadingQuestions && <p className="text-sm text-muted-foreground">Đang tải câu hỏi...</p>}
+          {questions && questions.length === 0 && (
+            <p className="text-sm text-muted-foreground">Chưa có câu hỏi nào.</p>
+          )}
+
+          <div className="space-y-3">
+            {questions
+              ?.slice()
+              .sort((a, b) => a.order - b.order)
+              .map((q, idx) => (
+                <QuestionRow
+                  key={q.id}
+                  question={q}
+                  index={idx}
+                  examId={examId}
+                  isDraft={isDraft}
+                  onDelete={() => handleDelete(q.id)}
+                />
+              ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="submissions" className="pt-4">
+          <SubmissionsList classId={classId} examId={examId} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
@@ -139,9 +166,25 @@ function QuestionRow({
     <Card>
       <CardContent className="space-y-2 py-4">
         <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-medium">
-            Câu {index + 1} ({typeLabel(question.type)} · {question.score} điểm): {question.content}
-          </p>
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium">
+              Câu {index + 1} ({typeLabel(question.type)} · {question.score} điểm): {question.content}
+            </p>
+            {(question.difficultyLevel || question.skillTag) && (
+              <div className="flex gap-1.5">
+                {question.difficultyLevel && <Badge variant="outline">{question.difficultyLevel}</Badge>}
+                {question.skillTag && <Badge variant="outline">{question.skillTag}</Badge>}
+              </div>
+            )}
+            {question.contentImageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element -- ảnh Cloudinary tuỳ ý, không cấu hình next/image
+              <img
+                src={question.contentImageUrl}
+                alt=""
+                className="max-h-40 rounded-md border object-contain"
+              />
+            )}
+          </div>
           {isDraft && (
             <div className="flex shrink-0 gap-1">
               <QuestionFormDialog
@@ -165,10 +208,18 @@ function QuestionRow({
         </div>
 
         {question.type === "MULTIPLE_CHOICE" && question.options && (
-          <ul className="space-y-0.5 pl-4 text-sm text-muted-foreground">
+          <ul className="space-y-1.5 pl-4 text-sm text-muted-foreground">
             {question.options.map((opt) => (
               <li key={opt.key} className={opt.key === question.correctAnswer ? "font-medium text-primary" : ""}>
-                {opt.key}. {opt.text} {opt.key === question.correctAnswer && "✓"}
+                <div className="flex items-center gap-2">
+                  <span>
+                    {opt.key}. {opt.text} {opt.key === question.correctAnswer && "✓"}
+                  </span>
+                </div>
+                {opt.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element -- ảnh Cloudinary tuỳ ý
+                  <img src={opt.imageUrl} alt="" className="mt-1 h-16 rounded border object-contain" />
+                )}
               </li>
             ))}
           </ul>

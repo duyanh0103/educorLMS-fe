@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, apiUpload } from "@/lib/api-client";
 import type { Question, CreateQuestionPayload } from "@/types/question";
+import type { ImportQuestionsResponse } from "@/types/import-question";
 
 export function useQuestions(examId: string) {
   return useQuery({
@@ -44,6 +45,21 @@ export function useDeleteQuestion(examId: string) {
   return useMutation({
     mutationFn: (questionId: string) =>
       apiClient<{ id: string }>(`/questions/${questionId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["exams", examId, "questions"] });
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+    },
+  });
+}
+
+export function useImportQuestions(examId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      return apiUpload<ImportQuestionsResponse>(`/exams/${examId}/questions/import`, formData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["exams", examId, "questions"] });
       queryClient.invalidateQueries({ queryKey: ["classes"] });

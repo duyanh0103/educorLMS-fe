@@ -5,6 +5,7 @@ export type QuestionType = "MULTIPLE_CHOICE" | "ESSAY" | "CODE";
 export interface QuestionOption {
   key: string;
   text: string;
+  imageUrl?: string;
 }
 
 export interface SubmissionQuestion {
@@ -12,6 +13,7 @@ export interface SubmissionQuestion {
   examId: string;
   type: QuestionType;
   content: string;
+  contentImageUrl?: string;
   options: QuestionOption[] | null;
   score: number;
   order: number;
