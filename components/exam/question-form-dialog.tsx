@@ -55,6 +55,7 @@ export function QuestionFormDialog({
   const [correctAnswer, setCorrectAnswer] = useState(existingQuestion?.correctAnswer ?? "");
   const [difficultyLevel, setDifficultyLevel] = useState(existingQuestion?.difficultyLevel ?? "");
   const [skillTag, setSkillTag] = useState(existingQuestion?.skillTag ?? "");
+  const [error, setError] = useState<string | null>(null);
 
   // Nạp lại dữ liệu form mỗi lần mở dialog (thay vì dùng effect theo dõi `open`) — đây là phản
   // ứng với hành động mở dialog của người dùng, không phải đồng bộ hoá với hệ thống ngoài.
@@ -68,6 +69,7 @@ export function QuestionFormDialog({
       setCorrectAnswer(existingQuestion?.correctAnswer ?? "");
       setDifficultyLevel(existingQuestion?.difficultyLevel ?? "");
       setSkillTag(existingQuestion?.skillTag ?? "");
+      setError(null);
     }
     setOpen(nextOpen);
   }
@@ -95,6 +97,7 @@ export function QuestionFormDialog({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
     const payload: CreateQuestionPayload = {
       type,
       content,
@@ -112,8 +115,12 @@ export function QuestionFormDialog({
           }
         : {}),
     };
-    await onSubmit(payload);
-    setOpen(false);
+    try {
+      await onSubmit(payload);
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "Không thể lưu câu hỏi, vui lòng thử lại.");
+    }
   }
 
   const filledOptionsCount = options.filter((o) => o.text.trim() !== "" || o.imageUrl).length;
@@ -122,6 +129,19 @@ export function QuestionFormDialog({
   const isValid =
     content.trim().length >= 3 &&
     (type !== "MULTIPLE_CHOICE" || (filledOptionsCount >= 2 && !!correctAnswer));
+
+  // Trắc nghiệm cần thêm 2 điều kiện so với tự luận/code — nút bị disable không rõ lý do dễ bị
+  // hiểu nhầm là lỗi, nên hiện gợi ý còn thiếu gì.
+  const missingReason =
+    content.trim().length < 3
+      ? "Nội dung câu hỏi cần tối thiểu 3 ký tự."
+      : type !== "MULTIPLE_CHOICE"
+        ? null
+        : filledOptionsCount < 2
+          ? "Cần ít nhất 2 lựa chọn có nội dung (text hoặc ảnh)."
+          : !correctAnswer
+            ? "Cần chọn đáp án đúng — bấm vào ô tròn bên trái lựa chọn đúng."
+            : null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -216,6 +236,11 @@ export function QuestionFormDialog({
               )}
             </div>
           )}
+
+          {!isValid && missingReason && (
+            <p className="text-xs text-muted-foreground">{missingReason}</p>
+          )}
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
           <DialogFooter>
             <Button type="submit" disabled={!isValid || isSubmitting}>

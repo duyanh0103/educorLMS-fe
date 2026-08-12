@@ -209,6 +209,14 @@ export default function TakeExamPage({
     };
   }, [view, registerViolation]);
 
+  // Ẩn hẳn sidebar/header của dashboard layout trong lúc làm bài — không chỉ dựa vào Fullscreen
+  // API (đôi khi bị chặn, hoặc trình duyệt vẫn để lộ các ancestor ngoài khung fullscreen).
+  useEffect(() => {
+    if (view !== "taking") return;
+    document.body.classList.add("exam-taking-active");
+    return () => document.body.classList.remove("exam-taking-active");
+  }, [view]);
+
   // Cảnh báo khi rời/đóng trang giữa chừng
   useEffect(() => {
     if (view !== "taking") return;

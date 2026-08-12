@@ -129,3 +129,22 @@
     @apply font-sans;
   }
 }
+
+/* Ẩn hẳn thanh cuộn trên toàn app — vẫn cuộn được bằng chuột/trackpad/phím mũi tên,
+   chỉ là không hiển thị thanh scroll mặc định của trình duyệt. */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Edge/IE cũ */
+}
+*::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Edge (Chromium) */
+}
+
+/* Khi làm bài thi ở chế độ toàn màn hình: fullscreen chỉ áp cho khung làm bài (không phải
+   document.documentElement), nên sidebar/header của dashboard layout vẫn nằm trong DOM và có
+   thể lộ ra ngoài vùng fullscreen tuỳ trình duyệt/ancestor CSS. Ẩn hẳn qua class trên <body>
+   để đảm bảo luôn biến mất, không phụ thuộc hành vi Fullscreen API. */
+body.exam-taking-active #app-sidebar,
+body.exam-taking-active #app-header {
+  display: none;
+}

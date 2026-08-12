@@ -160,38 +160,39 @@ function GradeSubmissionView({
           </p>
 
           {essayQuestions.length > 0 ? (
-            <div className="space-y-2">
-              <Label htmlFor="manualScore">
-                Điểm tự luận (tổng {essayQuestions.length} câu, tối đa {maxEssayScore} điểm)
-              </Label>
-              <Input
-                id="manualScore"
-                type="number"
-                min={0}
-                max={maxEssayScore}
-                value={manualScore}
-                onChange={(e) => setManualScore(Number(e.target.value))}
-                disabled={isGraded}
-                className="w-32"
-              />
-            </div>
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="manualScore">
+                  Điểm tự luận (tổng {essayQuestions.length} câu, tối đa {maxEssayScore} điểm)
+                </Label>
+                <Input
+                  id="manualScore"
+                  type="number"
+                  min={0}
+                  max={maxEssayScore}
+                  value={manualScore}
+                  onChange={(e) => setManualScore(Number(e.target.value))}
+                  className="w-32"
+                />
+              </div>
+
+              {/* Backend cho phép chấm lại (chỉ chặn khi submission còn IN_PROGRESS) — không disable
+                  input/ẩn nút sau khi đã GRADED nữa, để giáo viên sửa được nếu lỡ chấm nhầm. */}
+              {isGraded && (
+                <p className="text-sm text-muted-foreground">
+                  Đã chấm — tổng điểm <strong className="text-primary">{submission.score}</strong> (tự động{" "}
+                  {submission.autoScore} + tự luận {submission.manualScore}). Có thể chấm lại nếu cần sửa.
+                </p>
+              )}
+
+              {error && <p className="text-sm text-destructive">{error}</p>}
+
+              <Button onClick={handleGrade} disabled={gradeSubmission.isPending}>
+                {gradeSubmission.isPending ? "Đang lưu..." : isGraded ? "Chấm lại điểm" : "Xác nhận chấm điểm"}
+              </Button>
+            </>
           ) : (
             <p className="text-sm text-muted-foreground">Đề không có câu tự luận — điểm đã tự động hoàn tất.</p>
-          )}
-
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
-          {!isGraded && essayQuestions.length > 0 && (
-            <Button onClick={handleGrade} disabled={gradeSubmission.isPending}>
-              {gradeSubmission.isPending ? "Đang lưu..." : "Xác nhận chấm điểm"}
-            </Button>
-          )}
-
-          {isGraded && (
-            <p className="text-sm text-muted-foreground">
-              Đã chấm — tổng điểm <strong className="text-primary">{submission.score}</strong> (tự động{" "}
-              {submission.autoScore} + tự luận {submission.manualScore}).
-            </p>
           )}
         </CardContent>
       </Card>

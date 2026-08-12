@@ -55,6 +55,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex h-screen">
       <aside
+        id="app-sidebar"
         className={`flex shrink-0 flex-col gap-0.5 border-r border-sidebar-border bg-sidebar p-3.5 transition-[width] duration-200 ${
           collapsed ? "w-17" : "w-55"
         }`}
@@ -117,7 +118,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center justify-between border-b bg-background px-7">
+        <header id="app-header" className="flex h-16 shrink-0 items-center justify-between border-b bg-background px-7">
           <div className="text-sm font-semibold text-foreground">
             {activeItem?.label ?? "EduCore"}
             {sectionLabel && (
