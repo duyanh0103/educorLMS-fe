@@ -69,7 +69,6 @@ export default function TakeExamPage({
   } = useMyRetakeRequest(examId, result?.id ?? "", view === "result" && !!result);
   const createRetakeRequest = useCreateRetakeRequest(examId, result?.id ?? "");
 
-  const examContainerRef = useRef<HTMLDivElement>(null);
   const lastViolationAt = useRef(0);
   const hasFinished = useRef(false); // true khi đã nộp (thủ công hoặc tự động) — chặn double-submit
   const answersRef = useRef<Record<string, string>>({});
@@ -81,9 +80,15 @@ export default function TakeExamPage({
 
   async function requestFullscreen() {
     try {
-      // Fullscreen riêng khung làm bài (không phải document.documentElement) để sidebar/header
-      // của dashboard layout (là sibling ngoài khung này) không hiển thị đè lên khi toàn màn hình.
-      await (examContainerRef.current ?? document.documentElement).requestFullscreen();
+      // Fullscreen document.documentElement (cả trang), KHÔNG phải examContainerRef — vì
+      // AlertDialog/Dialog (dialog xác nhận nộp bài, cảnh báo vi phạm...) portal ra document.body
+      // theo mặc định của Base UI. Nếu chỉ examContainerRef ở chế độ fullscreen, các dialog đó
+      // nằm ngoài khung fullscreen nên bị render phía sau nó — mở dialog nhưng không thấy gì cả
+      // (bug thực tế: bấm "Nộp bài" tưởng không phản ứng nhưng dialog xác nhận đã mở, chỉ là bị
+      // che khuất). Sidebar/header của dashboard layout đã được ẩn riêng qua class
+      // "exam-taking-active" trên <body> (xem effect theo dõi `view` bên dưới) nên không cần dựa
+      // vào việc giới hạn phạm vi fullscreen để che chúng nữa.
+      await document.documentElement.requestFullscreen();
     } catch {
       // Không hỗ trợ/bị chặn — vẫn cho làm bài, chỉ là không ép được fullscreen
     }
@@ -267,10 +272,6 @@ export default function TakeExamPage({
   }
 
   // ----- Render -----
-  // Toàn bộ nội dung (mọi view) được bọc trong MỘT div persistent duy nhất mang examContainerRef
-  // (xem return cuối hàm) — để node đó luôn tồn tại trong DOM ngay từ trước khi bấm "Bắt đầu làm bài",
-  // tránh việc requestFullscreen() nhắm vào ref còn null (do React chưa kịp render lại) hoặc việc
-  // node bị unmount giữa các view khiến trình duyệt tự thoát fullscreen.
   let content: ReactNode;
 
   if (loadingExam) {
@@ -528,13 +529,20 @@ export default function TakeExamPage({
           ))}
         </div>
 
-        {currentIndex < submission.questions.length - 1 ? (
-          <Button onClick={() => setCurrentIndex((i) => i + 1)}>Câu tiếp</Button>
-        ) : (
-          <Button onClick={handleManualSubmit} disabled={submitMutation.isPending}>
+        <div className="flex gap-2">
+          {/* Nộp bài luôn hiển thị, không chỉ ở câu cuối — học sinh có thể nộp sớm bất kỳ lúc nào
+              trong thời gian làm bài, không bắt buộc phải lướt hết các câu. */}
+          <Button
+            variant={currentIndex === submission.questions.length - 1 ? "default" : "outline"}
+            onClick={handleManualSubmit}
+            disabled={submitMutation.isPending}
+          >
             {submitMutation.isPending ? "Đang nộp..." : "Nộp bài"}
           </Button>
-        )}
+          {currentIndex < submission.questions.length - 1 && (
+            <Button onClick={() => setCurrentIndex((i) => i + 1)}>Câu tiếp</Button>
+          )}
+        </div>
       </div>
 
       <AlertDialog open={showViolationDialog} onOpenChange={setShowViolationDialog}>
@@ -572,14 +580,7 @@ export default function TakeExamPage({
     );
   }
 
-  return (
-    <div
-      ref={examContainerRef}
-      className="[&:fullscreen]:h-screen [&:fullscreen]:overflow-y-auto [&:fullscreen]:bg-[#FAFAF9] [&:fullscreen]:p-7"
-    >
-      {content}
-    </div>
-  );
+  return <>{content}</>;
 }
 
 function formatTime(totalSeconds: number) {
